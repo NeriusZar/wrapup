@@ -17,13 +17,13 @@ func main() {
 		return
 	}
 
-	fmt.Println("Let's look what you did in the last 30 days!")
+	fmt.Printf("Let's look what you did in the last 30 days!\n\n")
 	activities, err := getGitHubActivities(username)
 	if err != nil {
 		log.Fatal("Failed to get your activities", err)
 	}
 
 	for _, acitvity := range activities {
-		fmt.Printf("- %s\n", acitvity)
+		fmt.Println(acitvity)
 	}
 }
