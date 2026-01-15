@@ -46,8 +46,10 @@ func getGitHubActivities(username string) ([]string, error) {
 
 	resp, err := http.Get(urlString)
 	if err != nil {
-		//proccess error
 		return nil, nil
+	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New("Failed to fetch events")
 	}
 	defer resp.Body.Close()
 
@@ -62,20 +64,27 @@ func getGitHubActivities(username string) ([]string, error) {
 
 		newCommitsHappened := e.Type == "PushEvent"
 		if newCommitsHappened {
-			payload, err := convertToPushPayload(e.Payload)
-			if err != nil {
-				return nil, err
-			}
-
-			if commits, err := getCommits(username, e.Repo.RepoNameOnly(), payload.Head); err == nil {
-				for _, c := range commits {
-					formattedEvents = append(formattedEvents, c.String())
-				}
-			}
+			appendCommitsIfAny(&formattedEvents, e, username)
 		}
 	}
 
 	return formattedEvents, nil
+}
+
+func appendCommitsIfAny(events *[]string, e Event, username string) {
+	payload, err := convertToPushPayload(e.Payload)
+	if err != nil {
+		return
+	}
+
+	if commits, err := getCommits(username, e.Repo.RepoNameOnly(), payload.Head); err == nil {
+		for _, c := range commits {
+			if c.Sha == payload.Before {
+				break
+			}
+			*events = append(*events, c.String())
+		}
+	}
 }
 
 func convertToPushPayload(payloadMap map[string]interface{}) (PushEventPayload, error) {
@@ -127,9 +136,11 @@ func getCommits(username, repo, startingCommit string) ([]Commit, error) {
 func (e Event) String() string {
 	switch e.Type {
 	case "WatchEvent":
-		return fmt.Sprintf("[%s] You stared a %s repository ⭐️. %s", e.CreatedAt.Format("Jan 2"), e.Repo.Name, e.Repo.PublicUrl())
+		return fmt.Sprintf("[%s] You stared a %s repository ⭐️.", e.CreatedAt.Format("Jan 2"), e.Repo.Name)
 	case "PushEvent":
-		return fmt.Sprintf("[%s] You pushed one or multiple commits to a %s repository 🛠️", e.CreatedAt.Format("Jan 2"), e.Repo.Name)
+		return fmt.Sprintf("[%s] You pushed commits to a %s repository:", e.CreatedAt.Format("Jan 2"), e.Repo.Name)
+	case "CreateEvent":
+		return ""
 	default:
 		return e.Type + " event is not supported yet"
 	}
