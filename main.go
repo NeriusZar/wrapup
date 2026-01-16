@@ -1,23 +1,30 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
 )
 
 func main() {
+	scanner := bufio.NewScanner(os.Stdin)
 	username := ""
-	if len(os.Args) > 1 {
-		username = os.Args[1]
+
+	fmt.Println("Please enter your Github username:")
+	for {
+		scanner.Scan()
+		result := cleanInput(scanner.Text())
+		if len(result) > 0 {
+			username = result[0]
+			break
+		}
+
+		log.Fatal("Failed to provide Github username")
 	}
 
-	if username == "" {
-		log.Fatal("Github username was not provided")
-		return
-	}
+	fmt.Printf("Retrieving the Github activity of past 30 days of %s!\n\n", username)
 
-	fmt.Printf("Let's look what you did in the last 30 days!\n\n")
 	activities, err := getGitHubActivities(username)
 	if err != nil {
 		log.Fatal("Failed to get your activities", err)
